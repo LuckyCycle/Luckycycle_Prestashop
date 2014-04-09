@@ -20,8 +20,8 @@
 require_once dirname(__FILE__).'/luckysdk/lucky.php';
 
 if (!defined('_PS_VERSION_'))
-  exit;
- 
+	exit;
+
 class LuckyCycle extends Module
 {
 	// DB file
@@ -66,18 +66,23 @@ class LuckyCycle extends Module
 		foreach ($sql as $query)
 			if (!Db::getInstance()->execute(trim($query)))
 				return false;
-		
+
 
 			return parent::install()
-				&& Configuration::updateValue('LUCKYCYCLE_API_KEY', '')
-				&& Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', '')
-				&& Configuration::updateValue('LUCKYCYCLE_ACTIVE', false)
-				&& $this->registerHook('displayNav')
-				&& $this->registerHook('displayHeader')
-				&& $this->registerHook('actionCartSave')
-				&& $this->registerHook('displayOrderConfirmation')
-				;
-	}
+			&& Configuration::updateValue('LUCKYCYCLE_API_KEY', '')
+			&& Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', '')
+			&& Configuration::updateValue('LUCKYCYCLE_ACTIVE', false)
+			&& Configuration::updateValue('LUCKYCYCLE_ACTIVE', false)
+			&& Configuration::updateValue('LUCKYCYCLE_PRODUCTION', false)
+			&& Configuration::updateValue('LUCKYCYCLE_CUSTOM_URL', 'http://localhost:3000')
+			&& $this->registerHook('displayNav')
+			&& $this->registerHook('displayHeader')
+				//&& $this->registerHook('actionCartSave')
+			&& $this->registerHook('displayOrderConfirmation')
+			&& $this->registerHook('actionPaymentConfirmation')
+				//&& $this->registerHook('actionOrderStatusPostUpdate')
+			;
+		}
 
 	/**
  	 * uninstall
@@ -85,9 +90,11 @@ class LuckyCycle extends Module
 	public function uninstall()
 	{
 		return Configuration::deleteByName('LUCKYCYCLE_API_KEY') 
-				&& Configuration::deleteByName('LUCKYCYCLE_OPERATION_HASH') 
-				&& Configuration::deleteByName('LUCKYCYCLE_ACTIVE') 
-				&& parent::uninstall();
+		&& Configuration::deleteByName('LUCKYCYCLE_OPERATION_HASH') 
+		&& Configuration::deleteByName('LUCKYCYCLE_ACTIVE') 
+		&& Configuration::deleteByName('LUCKYCYCLE_PRODUCTION') 
+		&& Configuration::deleteByName('LUCKYCYCLE_CUSTOM_URL') 
+		&& parent::uninstall();
 	}
 
 	/**
@@ -102,6 +109,8 @@ class LuckyCycle extends Module
 			Configuration::updateValue('LUCKYCYCLE_API_KEY', Tools::getValue('luckycycle_api_key'));
 			Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', Tools::getValue('luckycycle_operation_hash'));
 			Configuration::updateValue('LUCKYCYCLE_ACTIVE', Tools::getValue('luckycycle_active'));
+			Configuration::updateValue('LUCKYCYCLE_PRODUCTION', Tools::getValue('luckycycle_production'));
+			Configuration::updateValue('LUCKYCYCLE_CUSTOM_URL', Tools::getValue('luckycycle_custom_url'));
 			$this->_clearCache('luckycycle.tpl');
 			//$this->_clearCache('nav.tpl');
 			$html .= $this->displayConfirmation($this->l('Configuration updated'));
@@ -131,7 +140,7 @@ class LuckyCycle extends Module
 	public function hookDisplayAdminHomeQuickLinks()
 	{	
 		$this->context->smarty->assign('minicskeleton', $this->name);
-	    return $this->display(__FILE__, 'views/templates/hooks/quick_links.tpl');    
+		return $this->display(__FILE__, 'views/templates/hooks/quick_links.tpl');    
 	}
 
 	// FRONT OFFICE HOOKS
@@ -165,9 +174,9 @@ class LuckyCycle extends Module
 			'some_smarty_array' => array(
 				'some_smarty_var' => 'some_data',
 				'some_smarty_var' => 'some_data'
-			),
+				),
 			'some_smarty_var' => 'some_data'
-		));
+			));
 
 		return $this->display(__FILE__, 'views/templates/hooks/home.tpl');	
 	}
@@ -185,7 +194,7 @@ class LuckyCycle extends Module
 	 */
 	public function hookDisplayLeftColumn($params)
 	{
-	 	return $this->hookDisplayHome($params);
+		return $this->hookDisplayHome($params);
 	}
 
 	/**
@@ -203,7 +212,7 @@ class LuckyCycle extends Module
 				'legend' => array(
 					'title' => $this->l('Settings'),
 					'icon' => 'icon-cogs'
-				),
+					),
 				'input' => array(
 					array(
 						'type' => 'switch',
@@ -211,95 +220,181 @@ class LuckyCycle extends Module
 						'name' => 'luckycycle_active',
 						'desc' => $this->l('Pokes not sent if disabled.'),
 						'values' => array(
-									array(
-										'id' => 'active_on',
-										'value' => 1,
-										'label' => $this->l('Enabled')
-									),
-									array(
-										'id' => 'active_off',
-										'value' => 0,
-										'label' => $this->l('Disabled')
-									)
+							array(
+								'id' => 'active_on',
+								'value' => 1,
+								'label' => $this->l('Enabled')
 								),
-					),
+							array(
+								'id' => 'active_off',
+								'value' => 0,
+								'label' => $this->l('Disabled')
+								)
+							),
+						),
 					array(
 						'type' => 'text',
 						'label' => $this->l('LuckyCycle Api Key'),
 						'name' => 'luckycycle_api_key',
 						'desc' => $this->l('You can get this ID on <a target="_blank" href="http://LuckyCycle.com">LuckyCycle.com</a>.'),
-					),
+						),
 					array(
 						'type' => 'text',
 						'label' => $this->l('Operation Id'),
 						'name' => 'luckycycle_operation_hash',
 						'desc' => $this->l('You can get this ID on <a target="_blank" href="http://LuckyCycle.com">LuckyCycle.com</a>.'),
+						),
+					array(
+						'type' => 'switch',
+						'label' => $this->l('Production mode'),
+						'name' => 'luckycycle_production',
+						'desc' => $this->l('Set to Yes to use the production server.'),
+						'values' => array(
+							array(
+								'id' => 'active_on',
+								'value' => 1,
+								'label' => $this->l('Enabled')
+								),
+							array(
+								'id' => 'active_off',
+								'value' => 0,
+								'label' => $this->l('Disabled')
+								)
+							),
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('Custom Url'),
+						'name' => 'luckycycle_custom_url',
+						'desc' => $this->l('Use a custom url to make the calls.'),
+						),
+
 					),
-				),
 				'submit' => array(
 					'title' => $this->l('Save'),
 				)
 			),
 		);
-		error_log("LuckyForm displayed");
-		
-		$helper = new HelperForm();
-		$helper->show_toolbar = false;
-		$helper->table =  $this->table;
-		$lang = new Language((int)Configuration::get('PS_LANG_DEFAULT'));
-		$helper->default_form_language = $lang->id;
-		$helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
-		$this->fields_form = array();
 
-		$helper->identifier = $this->identifier;
-		$helper->submit_action = 'submitModule';
-		$helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false).'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
-		$helper->token = Tools::getAdminTokenLite('AdminModules');
-		$helper->tpl_vars = array(
-			'fields_value' => $this->getConfigFieldsValues(),
-			'languages' => $this->context->controller->getLanguages(),
-			'id_language' => $this->context->language->id
+$helper = new HelperForm();
+$helper->show_toolbar = false;
+$helper->table =  $this->table;
+$lang = new Language((int)Configuration::get('PS_LANG_DEFAULT'));
+$helper->default_form_language = $lang->id;
+$helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
+$this->fields_form = array();
+
+$helper->identifier = $this->identifier;
+$helper->submit_action = 'submitModule';
+$helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false).'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
+$helper->token = Tools::getAdminTokenLite('AdminModules');
+$helper->tpl_vars = array(
+	'fields_value' => $this->getConfigFieldsValues(),
+	'languages' => $this->context->controller->getLanguages(),
+	'id_language' => $this->context->language->id
+	);
+
+return $helper->generateForm(array($fields_form));
+}
+
+public function getConfigFieldsValues()
+{
+	return array(
+		'luckycycle_api_key' => 		Tools::getValue('luckycycle_api_key', Configuration::get('LUCKYCYCLE_API_KEY')),
+		'luckycycle_operation_hash' => 	Tools::getValue('luckycycle_operation_hash', Configuration::get('LUCKYCYCLE_OPERATION_HASH')),
+		'luckycycle_active' => 			Tools::getValue('luckycycle_active', Configuration::get('LUCKYCYCLE_ACTIVE')),
+		'luckycycle_production' => 		Tools::getValue('luckycycle_production', Configuration::get('LUCKYCYCLE_PRODUCTION')),
+		'luckycycle_custom_url' => 		Tools::getValue('luckycycle_custom_url', Configuration::get('LUCKYCYCLE_CUSTOM_URL')),
 		);
+}
 
-		return $helper->generateForm(array($fields_form));
-	}
+public function hookActionCartSave($params)
+{
+	error_log("LuckyForm hookActionCartSave");
+}
 
-	public function getConfigFieldsValues()
-	{
-		return array(
-			'luckycycle_api_key' => Tools::getValue('luckycycle_api_key', Configuration::get('LUCKYCYCLE_API_KEY')),
-			'luckycycle_operation_hash' => Tools::getValue('luckycycle_operation_hash', Configuration::get('LUCKYCYCLE_OPERATION_HASH')),
-			'luckycycle_active' => Tools::getValue('luckycycle_active', Configuration::get('LUCKYCYCLE_ACTIVE')),
-		);
-	}
+	// run on confirmation (later for cheque and wire)
+public function hookActionPaymentConfirmation($params) 
+{
+	if (Configuration::get('LUCKYCYCLE_ACTIVE')) {
+		// error_log( print_R($params['id_order'],TRUE) );
+		error_log("LuckyForm hookActionPaymentConfirmation");
+		$order = new Order((int)$params['id_order']);
+		$currency = new Currency((int)$order->id_currency);
+		$lang = new Language((int)$order->id_lang);
+		$customer = new Customer((int)$order->id_customer);
+		// error_log( print_R($currency->iso_code,TRUE) );
+		// error_log( print_R($lang->iso_code,TRUE) );
+		// error_log( print_R($order->total_paid,TRUE) );
+		// error_log( print_R($order->total_paid_real,TRUE) );
+		// error_log( print_R($order->total_products,TRUE) );
+		// error_log( print_R($order->total_products_wt,TRUE) );
+		// error_log( print_R($order->total_shipping,TRUE) );
+		// error_log( print_R($order->id_customer,TRUE) );
+		// error_log( print_R($customer,TRUE) );
 
-	public function hookActionCartSave($params)
-	{
-		error_log("LuckyForm hookActionCartSave");
-		error_log( print_R($params['cart']->id,TRUE) );
-		$api_key = '5ddb2b0631c47caaf17868d89c01261e80159fd7';
-		$op = '478aa07fa86b29703f73c78afe17f650';
-		$req = new LuckyCycleApi('http://localhost:3000');
+		$api_key = Configuration::get('LUCKYCYCLE_API_KEY');
+		$op = Configuration::get('LUCKYCYCLE_OPERATION_HASH');
+		$url = Configuration::get('LUCKYCYCLE_PRODUCTION') ? 'https://www.luckycycle.com' : Configuration::get('LUCKYCYCLE_CUSTOM_URL');
+		$req = new LuckyCycleApi($url);
 		$req->setApiKey($api_key);
 		$req->setOperationId($op);
 		$pokedata = array(
-		    'operation_id' => $op,
-		    'user_uid' => time(),
-		    //'item_uid' => $params['cart']->id,
-		    'item_value' => 108,
-		    'item_currency' => 'EUR',
-		    // 'email' => $email,
-		    // 'firstname' => $firstname,
-		    // 'lastname' => $lastname,
+			'operation_id' => $op,
+			'user_uid' => (string)$order->id_customer,
+			'item_uid' => (string)$params['id_order'],
+			'item_value' => (string)$order->total_paid,
+			'item_currency' => $currency->iso_code,
+			'language' => $lang->iso_code,
+			'firstname' => $customer->firstname,
+			'lastname' => $customer->lastname,
+			'email' => $customer->email,
 
 
-		);
-		if($random_data) {
-			$pokedata['random_data'] = 1;
+			);
+
+		try {
+			$poke = $req->poke($pokedata);
+		} catch (Exception $e) {
+			// error_log( print_R($e->getMessage(),TRUE) );
+			// TODO : logt his and handle this case...
 		}
 
-		$poke = $req->poke($pokedata);
+		// error_log( print_R($poke,TRUE) );
+		// error_log( print_R($poke['can_play'],TRUE) );
+		if ($poke && $poke['can_play']==1) {
+			error_log("we got a poke back that can play");
+
+			// check existenz
+			$sql = "select count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where hash = '" . $poke['computed_hash'] . "'";
+			//error_log( print_R($sql,TRUE) );
+			if ($row = Db::getInstance()->getRow($sql))
+				$tot = $row['tot'];
+
+			if ($tot==0) 
+			{
+				Db::getInstance()->insert('luckycycle_pokes', array(
+					'hash' => $poke['computed_hash'],
+					'id_order' => (string)$params['id_order'],
+					'operation_id' => Configuration::get('LUCKYCYCLE_OPERATION_HASH'),
+					'type' => 'basket',
+					'id_customer' => (string)$order->id_customer,
+					'created_at' => date('Y-m-d H:i:s'),
+					'total_played' => $order->total_paid_real
+					));
+				error_log('Poke added in DB');
+			} else {
+				error_log('Poke already in DB');
+			}
+
+			
+		} else {
+			// user cannot play whatever reason... TODO handle this
+			error_log("we didn't get a poke back, user cannot play on this order or error");
+		}
 	}
+}
+
 
 }
 
