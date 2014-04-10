@@ -5,11 +5,11 @@ require_once 'PestJSON.php';
 class LuckyCycleApi extends PestJSON
 {
 	const DEV_URL = 'http://localhost:3000';
-	const PROD_URL = 'http://www.luckycycle.com/api/v1';
+	const PROD_URL = 'https://www.luckycycle.com';
 
-	public function __construct($base_url)
+	public function __construct($base_url=DEV_URL)
 	{
-		parent::__construct(self::DEV_URL);
+		parent::__construct($base_url);
 		//$this->mode = 
 	}
 

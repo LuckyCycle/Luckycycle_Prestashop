@@ -5,7 +5,7 @@
 
 require_once './lucky.php';
 
-$api_key = '5ddb2b0631c47caaf17868d89c01261e80159fd7';
+$api_key = '9c936dbf1cfa00bc11a8961238d34fb1';
 
 if (isset($_GET['operation_id'])) {
 
@@ -21,7 +21,7 @@ if (isset($_GET['operation_id'])) {
 
 	if ($op) {
 
-		$req = new LuckyCycleApi('http://localhost:3000');
+		$req = new LuckyCycleApi('https://www.luckycycle.com');
 		$req->setApiKey($api_key);
 		$req->setOperationId($op);
 
