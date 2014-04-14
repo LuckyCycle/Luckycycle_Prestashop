@@ -10,6 +10,7 @@ $api_key = '9c936dbf1cfa00bc11a8961238d34fb1';
 if (isset($_GET['operation_id'])) {
 
 	$op = $_GET['operation_id'];
+	$api_key = $_GET['api_key'];
 
 	if ($op) {
 
@@ -35,6 +36,7 @@ if (isset($_GET['operation_id'])) {
 Enter an operation id:
 
 <form action="get.php">
+	<input type="text" name="api_key" placeholder="Api Key">
 	<input type="text" name="operation_id" placeholder="Operation id">
 	<input type="submit">
 </form>

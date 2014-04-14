@@ -27,9 +27,12 @@ class LuckyCycle extends Module
 	// DB file
 	const INSTALL_SQL_FILE = 'install.sql';
 
+	public $game_ok;
+
 	public function __construct()
 	{
 		$this->name = 'luckycycle';
+
 		$this->tab = 'advertising_marketing';
 		$this->version = '0.1';
 		$this->author = 'LuckyCycle';
@@ -105,13 +108,14 @@ class LuckyCycle extends Module
 		$html = '';
 		// If we try to update the settings
 		if (Tools::isSubmit('submitModule'))
-		{				
+		{
+			// TODO check for validity of apikey and op id through the api
 			Configuration::updateValue('LUCKYCYCLE_API_KEY', Tools::getValue('luckycycle_api_key'));
 			Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', Tools::getValue('luckycycle_operation_hash'));
 			Configuration::updateValue('LUCKYCYCLE_ACTIVE', Tools::getValue('luckycycle_active'));
 			Configuration::updateValue('LUCKYCYCLE_PRODUCTION', Tools::getValue('luckycycle_production'));
 			Configuration::updateValue('LUCKYCYCLE_CUSTOM_URL', Tools::getValue('luckycycle_custom_url'));
-			$this->_clearCache('luckycycle.tpl');
+			//$this->_clearCache('luckycycle.tpl');
 			//$this->_clearCache('nav.tpl');
 			$html .= $this->displayConfirmation($this->l('Configuration updated'));
 		}
@@ -129,9 +133,9 @@ class LuckyCycle extends Module
 	public function hookDisplayBackOfficeHeader()
 	{
 		// CSS
-		$this->context->controller->addCSS($this->_path.'views/css/elusive-icons/elusive-webfont.css');
-		// JS
-		$this->context->controller->addJS($this->_path.'views/js/js_file_name.js');	
+		// $this->context->controller->addCSS($this->_path.'views/css/elusive-icons/elusive-webfont.css');
+		// // JS
+		// $this->context->controller->addJS($this->_path.'views/js/js_file_name.js');	
 	}
 
 	/**
@@ -313,6 +317,41 @@ public function hookActionCartSave($params)
 	error_log("LuckyForm hookActionCartSave");
 }
 
+
+public function hookDisplayOrderConfirmation($params)
+{
+	error_log("Display form called");
+	//error_log( print_R($params['objOrder'],TRUE) );
+
+	$order_id = $params['objOrder']->id;
+	$customer_id = $params['objOrder']->id_customer;
+
+	error_log("order:".$order_id);
+	error_log("custo:".$customer_id);
+
+	$sql = "select count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where id_order = '" . $order_id . "' AND id_customer = '" . $customer_id . "'";
+	//error_log( print_R($sql,TRUE) );
+	if ($row = Db::getInstance()->getRow($sql))
+		$tot = $row['tot'];
+
+	error_log($tot);
+
+	//if($this->game_ok) {
+	if(true) {
+		$this->context->smarty->assign('vars', array(
+			'iframe' => 'Play the LuckyCycle Game',
+			'some_smarty_array' => array(
+				'some_smarty_var' => 'some_data',
+				'some_smarty_var' => 'some_data'
+				),
+			'some_smarty_var2' => 'some_data2'
+			));
+
+		return $this->display(__FILE__, 'views/templates/hooks/orderConfirmation.tpl');	
+	}
+}
+
+
 	// run on confirmation (later for cheque and wire)
 public function hookActionPaymentConfirmation($params) 
 {
@@ -350,19 +389,19 @@ public function hookActionPaymentConfirmation($params)
 			'lastname' => $customer->lastname,
 			'email' => $customer->email,
 
-
-			);
+		);
 
 		try {
 			$poke = $req->poke($pokedata);
 		} catch (Exception $e) {
-			// error_log( print_R($e->getMessage(),TRUE) );
+			error_log( print_R($e->getMessage(),TRUE) );
 			// TODO : logt his and handle this case...
 		}
 
 		// error_log( print_R($poke,TRUE) );
 		// error_log( print_R($poke['can_play'],TRUE) );
 		if ($poke && $poke['can_play']==1) {
+
 			error_log("we got a poke back that can play");
 
 			// check existenz
