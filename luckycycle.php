@@ -75,9 +75,11 @@ class LuckyCycle extends Module
 			&& Configuration::updateValue('LUCKYCYCLE_API_KEY', '')
 			&& Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', '')
 			&& Configuration::updateValue('LUCKYCYCLE_ACTIVE', false)
-			&& Configuration::updateValue('LUCKYCYCLE_ACTIVE', false)
-			&& Configuration::updateValue('LUCKYCYCLE_PRODUCTION', false)
+			&& Configuration::updateValue('LUCKYCYCLE_PRODUCTION', true)
 			&& Configuration::updateValue('LUCKYCYCLE_CUSTOM_URL', 'http://localhost:3000')
+			&& Configuration::updateValue('LUCKYCYCLE_IFRAME_WIDTH', '100%')
+			&& Configuration::updateValue('LUCKYCYCLE_IFRAME_HEIGHT', '450')
+			&& Configuration::updateValue('LUCKYCYCLE_IFRAME_CSS', 'border:1px solid lightgrey;')
 			&& $this->registerHook('displayNav')
 			&& $this->registerHook('displayHeader')
 				//&& $this->registerHook('actionCartSave')
@@ -97,6 +99,9 @@ class LuckyCycle extends Module
 		&& Configuration::deleteByName('LUCKYCYCLE_ACTIVE') 
 		&& Configuration::deleteByName('LUCKYCYCLE_PRODUCTION') 
 		&& Configuration::deleteByName('LUCKYCYCLE_CUSTOM_URL') 
+		&& Configuration::deleteByName('LUCKYCYCLE_IFRAME_WIDTH') 
+		&& Configuration::deleteByName('LUCKYCYCLE_IFRAME_HEIGHT') 
+		&& Configuration::deleteByName('LUCKYCYCLE_IFRAME_CSS') 
 		&& parent::uninstall();
 	}
 
@@ -115,6 +120,9 @@ class LuckyCycle extends Module
 			Configuration::updateValue('LUCKYCYCLE_ACTIVE', Tools::getValue('luckycycle_active'));
 			Configuration::updateValue('LUCKYCYCLE_PRODUCTION', Tools::getValue('luckycycle_production'));
 			Configuration::updateValue('LUCKYCYCLE_CUSTOM_URL', Tools::getValue('luckycycle_custom_url'));
+			Configuration::updateValue('LUCKYCYCLE_IFRAME_WIDTH', Tools::getValue('luckycycle_iframe_width'));
+			Configuration::updateValue('LUCKYCYCLE_IFRAME_HEIGHT', Tools::getValue('luckycycle_iframe_height'));
+			Configuration::updateValue('LUCKYCYCLE_IFRAME_CSS', Tools::getValue('luckycycle_iframe_css'));
 			//$this->_clearCache('luckycycle.tpl');
 			//$this->_clearCache('nav.tpl');
 			$html .= $this->displayConfirmation($this->l('Configuration updated'));
@@ -222,7 +230,7 @@ class LuckyCycle extends Module
 						'type' => 'switch',
 						'label' => $this->l('Activate LuckyCycle Basket'),
 						'name' => 'luckycycle_active',
-						'desc' => $this->l('Pokes not sent if disabled.'),
+						'desc' => $this->l('Pokes not sent and frame not shown if disabled'),
 						'values' => array(
 							array(
 								'id' => 'active_on',
@@ -252,7 +260,7 @@ class LuckyCycle extends Module
 						'type' => 'switch',
 						'label' => $this->l('Production mode'),
 						'name' => 'luckycycle_production',
-						'desc' => $this->l('Set to Yes to use the production server.'),
+						'desc' => $this->l('Set to Yes to use the production server'),
 						'values' => array(
 							array(
 								'id' => 'active_on',
@@ -270,7 +278,27 @@ class LuckyCycle extends Module
 						'type' => 'text',
 						'label' => $this->l('Custom Url'),
 						'name' => 'luckycycle_custom_url',
-						'desc' => $this->l('Use a custom url to make the calls.'),
+						'desc' => $this->l('Use a custom url to make the calls'),
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('iFrame width'),
+						'name' => 'luckycycle_iframe_width',
+						'desc' => $this->l('Specify iframe width in % or pixels'),
+						'size'     => 100,
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('iFrame height'),
+						'name' => 'luckycycle_iframe_height',
+						'desc' => $this->l('Specify iframe height in pixels'),
+						),
+					array(
+						'type' => 'textarea',
+						'label' => $this->l('iFrame tag css'),
+						'name' => 'luckycycle_iframe_css',
+						'rows' => 3,
+						'desc' => $this->l('Specify iframe tag css'),
 						),
 
 					),
@@ -309,6 +337,9 @@ public function getConfigFieldsValues()
 		'luckycycle_active' => 			Tools::getValue('luckycycle_active', Configuration::get('LUCKYCYCLE_ACTIVE')),
 		'luckycycle_production' => 		Tools::getValue('luckycycle_production', Configuration::get('LUCKYCYCLE_PRODUCTION')),
 		'luckycycle_custom_url' => 		Tools::getValue('luckycycle_custom_url', Configuration::get('LUCKYCYCLE_CUSTOM_URL')),
+		'luckycycle_iframe_width' => 		Tools::getValue('luckycycle_iframe_width', Configuration::get('LUCKYCYCLE_IFRAME_WIDTH')),
+		'luckycycle_iframe_height' => 		Tools::getValue('luckycycle_iframe_height', Configuration::get('LUCKYCYCLE_IFRAME_HEIGHT')),
+		'luckycycle_iframe_css' => 		Tools::getValue('luckycycle_iframe_css', Configuration::get('LUCKYCYCLE_IFRAME_CSS')),
 		);
 }
 
@@ -329,22 +360,24 @@ public function hookDisplayOrderConfirmation($params)
 	error_log("order:".$order_id);
 	error_log("custo:".$customer_id);
 
-	$sql = "select count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where id_order = '" . $order_id . "' AND id_customer = '" . $customer_id . "'";
-	//error_log( print_R($sql,TRUE) );
+	$sql = "select hash,count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where id_order = '" . $order_id . "' AND id_customer = '" . $customer_id . "'";
+	error_log( print_R($sql,TRUE) );
 	if ($row = Db::getInstance()->getRow($sql))
 		$tot = $row['tot'];
 
 	error_log($tot);
+	error_log($row['hash']);
 
-	//if($this->game_ok) {
-	if(true) {
+	if($tot>0) {
+	//if(true) {
 		$this->context->smarty->assign('vars', array(
 			'iframe' => 'Play the LuckyCycle Game',
-			'some_smarty_array' => array(
-				'some_smarty_var' => 'some_data',
-				'some_smarty_var' => 'some_data'
+			'frame' => array(
+				'width' => Configuration::get('LUCKYCYCLE_IFRAME_WIDTH'),
+				'height' => Configuration::get('LUCKYCYCLE_IFRAME_HEIGHT'),
+				'css' => Configuration::get('LUCKYCYCLE_IFRAME_CSS'),
 				),
-			'some_smarty_var2' => 'some_data2'
+			'hash' => $row['hash']
 			));
 
 		return $this->display(__FILE__, 'views/templates/hooks/orderConfirmation.tpl');	
@@ -429,7 +462,7 @@ public function hookActionPaymentConfirmation($params)
 			
 		} else {
 			// user cannot play whatever reason... TODO handle this
-			error_log("we didn't get a poke back, user cannot play on this order or error");
+			error_log("we didn't get a poke back, user cannot play on this order or an error happened");
 		}
 	}
 }
