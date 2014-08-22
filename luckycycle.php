@@ -80,11 +80,16 @@ class LuckyCycle extends Module
 			&& Configuration::updateValue('LUCKYCYCLE_IFRAME_WIDTH', '100%')
 			&& Configuration::updateValue('LUCKYCYCLE_IFRAME_HEIGHT', '450')
 			&& Configuration::updateValue('LUCKYCYCLE_IFRAME_CSS', 'border:1px solid lightgrey;')
+			&& Configuration::updateValue('LUCKYCYCLE_MANUFACTURERS_IDS', '')
+			&& Configuration::updateValue('LUCKYCYCLE_CATEGORIES_EXCLUDED', '')
+			&& Configuration::updateValue('LUCKYCYCLE_CATEGORIES_ONLY', '')
+			&& Configuration::updateValue('LUCKYCYCLE_INCLUDE_SHIPPING', true)
 			&& $this->registerHook('displayNav')
 			&& $this->registerHook('displayHeader')
 				//&& $this->registerHook('actionCartSave')
 			&& $this->registerHook('displayOrderConfirmation')
 			&& $this->registerHook('actionPaymentConfirmation')
+			&& $this->registerHook('shoppinCart')
 				//&& $this->registerHook('actionOrderStatusPostUpdate')
 			;
 		}
@@ -102,6 +107,10 @@ class LuckyCycle extends Module
 		&& Configuration::deleteByName('LUCKYCYCLE_IFRAME_WIDTH') 
 		&& Configuration::deleteByName('LUCKYCYCLE_IFRAME_HEIGHT') 
 		&& Configuration::deleteByName('LUCKYCYCLE_IFRAME_CSS') 
+		&& Configuration::deleteByName('LUCKYCYCLE_MANUFACTURERS_IDS')
+		&& Configuration::deleteByName('LUCKYCYCLE_CATEGORIES_EXCLUDED')
+		&& Configuration::deleteByName('LUCKYCYCLE_CATEGORIES_ONLY')
+		&& Configuration::deleteByName('LUCKYCYCLE_INCLUDE_SHIPPING') 
 		&& parent::uninstall();
 	}
 
@@ -123,6 +132,10 @@ class LuckyCycle extends Module
 			Configuration::updateValue('LUCKYCYCLE_IFRAME_WIDTH', Tools::getValue('luckycycle_iframe_width'));
 			Configuration::updateValue('LUCKYCYCLE_IFRAME_HEIGHT', Tools::getValue('luckycycle_iframe_height'));
 			Configuration::updateValue('LUCKYCYCLE_IFRAME_CSS', Tools::getValue('luckycycle_iframe_css'));
+			Configuration::updateValue('LUCKYCYCLE_MANUFACTURERS_IDS', Tools::getValue('luckycycle_manufacturers_ids'));
+			Configuration::updateValue('LUCKYCYCLE_CATEGORIES_EXCLUDED', Tools::getValue('luckycycle_categories_excluded'));
+			Configuration::updateValue('LUCKYCYCLE_CATEGORIES_ONLY', Tools::getValue('luckycycle_categories_only'));
+			Configuration::updateValue('LUCKYCYCLE_INCLUDE_SHIPPING', Tools::getValue('luckycycle_include_shipping'));
 			//$this->_clearCache('luckycycle.tpl');
 			//$this->_clearCache('nav.tpl');
 			$html .= $this->displayConfirmation($this->l('Configuration updated'));
@@ -156,6 +169,20 @@ class LuckyCycle extends Module
 	}
 
 	// FRONT OFFICE HOOKS
+
+	/**
+ 	 * <head> Hook
+	 */
+	public function hookShoppingCart()
+	{
+		error_log("Lucky hookShoppingCart");
+
+		// CSS
+		$this->context->controller->addCSS($this->_path.'views/css/'.$this->name.'.css');
+		// JS
+		$this->context->controller->addJS($this->_path.'views/js/'.$this->name.'.js');
+	}
+
 
 	/**
  	 * <head> Hook
@@ -248,14 +275,15 @@ class LuckyCycle extends Module
 						'type' => 'text',
 						'label' => $this->l('LuckyCycle Api Key'),
 						'name' => 'luckycycle_api_key',
-						'desc' => $this->l('You can get this ID on <a target="_blank" href="http://LuckyCycle.com">LuckyCycle.com</a>.'),
+						'desc' => $this->l('You can get this ID on LuckyCycle.com.'),
 						),
 					array(
 						'type' => 'text',
 						'label' => $this->l('Operation Id'),
 						'name' => 'luckycycle_operation_hash',
-						'desc' => $this->l('You can get this ID on <a target="_blank" href="http://LuckyCycle.com">LuckyCycle.com</a>.'),
+						'desc' => $this->l('You can get this ID on LuckyCycle.com.'),
 						),
+					// UNCOMMENT HERE TO BE ABLE TO CHANGE API SERVER
 					array(
 						'type' => 'switch',
 						'label' => $this->l('Production mode'),
@@ -300,6 +328,46 @@ class LuckyCycle extends Module
 						'rows' => 3,
 						'desc' => $this->l('Specify iframe tag css'),
 						),
+					array(
+						'type' => 'switch',
+						'label' => $this->l('Include shipping costs'),
+						'name' => 'luckycycle_include_shipping',
+						'desc' => $this->l('Only available in full basket mode (no filtering on categories or manufacturers)'),
+						'values' => array(
+							array(
+								'id' => 'active_on',
+								'value' => 1,
+								'label' => $this->l('Enabled')
+								),
+							array(
+								'id' => 'active_off',
+								'value' => 0,
+								'label' => $this->l('Disabled')
+								)
+							),
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('Limit to some manufacturers (hybrid version)'),
+						'name' => 'luckycycle_manufacturers_ids',
+						'rows' => 3,
+						'desc' => $this->l('Comma separated list of manufacturers ids (ex: 1,4,23,44)'),
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('Exclude categories (not working)'),
+						'name' => 'luckycycle_categories_excluded',
+						'rows' => 3,
+						'desc' => $this->l('Comma separated list of categories ids'),
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('Only include categories (not working)'),
+						'name' => 'luckycycle_categories_only',
+						'rows' => 3,
+						'desc' => $this->l('Comma separated list of categories ids'),
+						),
+
 
 					),
 				'submit' => array(
@@ -340,6 +408,10 @@ public function getConfigFieldsValues()
 		'luckycycle_iframe_width' => 		Tools::getValue('luckycycle_iframe_width', Configuration::get('LUCKYCYCLE_IFRAME_WIDTH')),
 		'luckycycle_iframe_height' => 		Tools::getValue('luckycycle_iframe_height', Configuration::get('LUCKYCYCLE_IFRAME_HEIGHT')),
 		'luckycycle_iframe_css' => 		Tools::getValue('luckycycle_iframe_css', Configuration::get('LUCKYCYCLE_IFRAME_CSS')),
+		'luckycycle_manufacturers_ids' => 		Tools::getValue('luckycycle_manufacturers_ids', Configuration::get('LUCKYCYCLE_MANUFACTURERS_IDS')),
+		'luckycycle_categories_excluded' => 		Tools::getValue('luckycycle_categories_excluded', Configuration::get('LUCKYCYCLE_CATEGORIES_EXCLUDED')),
+		'luckycycle_categories_only' => 		Tools::getValue('luckycycle_categories_only', Configuration::get('LUCKYCYCLE_CATEGORIES_ONLY')),
+		'luckycycle_include_shipping' => 		Tools::getValue('luckycycle_include_shipping', Configuration::get('LUCKYCYCLE_INCLUDE_SHIPPING')),
 		);
 }
 
@@ -351,14 +423,13 @@ public function hookActionCartSave($params)
 
 public function hookDisplayOrderConfirmation($params)
 {
-	error_log("Display form called");
+	error_log("Display form order");
 	//error_log( print_R($params['objOrder'],TRUE) );
 
 	$order_id = $params['objOrder']->id;
 	$customer_id = $params['objOrder']->id_customer;
 
-	error_log("order:".$order_id);
-	error_log("custo:".$customer_id);
+	error_log("PS order_id/customer_id:" . $order_id . " / " . $customer_id);
 
 	$sql = "select hash,count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where id_order = '" . $order_id . "' AND id_customer = '" . $customer_id . "'";
 	error_log( print_R($sql,TRUE) );
@@ -390,80 +461,112 @@ public function hookActionPaymentConfirmation($params)
 {
 	if (Configuration::get('LUCKYCYCLE_ACTIVE')) {
 		// error_log( print_R($params['id_order'],TRUE) );
-		error_log("LuckyForm hookActionPaymentConfirmation");
+		error_log("LuckyForm hookActionPaymentConfirmation -> trying to POKE");
 		$order = new Order((int)$params['id_order']);
 		$currency = new Currency((int)$order->id_currency);
 		$lang = new Language((int)$order->id_lang);
 		$customer = new Customer((int)$order->id_customer);
 		// error_log( print_R($currency->iso_code,TRUE) );
 		// error_log( print_R($lang->iso_code,TRUE) );
-		// error_log( print_R($order->total_paid,TRUE) );
-		// error_log( print_R($order->total_paid_real,TRUE) );
-		// error_log( print_R($order->total_products,TRUE) );
-		// error_log( print_R($order->total_products_wt,TRUE) );
-		// error_log( print_R($order->total_shipping,TRUE) );
-		// error_log( print_R($order->id_customer,TRUE) );
-		// error_log( print_R($customer,TRUE) );
+		error_log( print_R("Total paid : " .$order->total_paid,TRUE) );
+		error_log( print_R("Total paid real?: " .$order->total_paid_real,TRUE) );
+		error_log( "Total products : " . print_R($order->total_products,TRUE) );
+		error_log( print_R("Total products wt : " .$order->total_products_wt,TRUE) );
+		error_log( print_R("Total shipping : " .$order->total_shipping,TRUE) );
+		// error_log( print_R("Customer id : " .$order->id_customer,TRUE) );
 
-		$api_key = Configuration::get('LUCKYCYCLE_API_KEY');
-		$op = Configuration::get('LUCKYCYCLE_OPERATION_HASH');
-		$url = Configuration::get('LUCKYCYCLE_PRODUCTION') ? 'https://www.luckycycle.com' : Configuration::get('LUCKYCYCLE_CUSTOM_URL');
-		$req = new LuckyCycleApi($url);
-		$req->setApiKey($api_key);
-		$req->setOperationId($op);
-		$pokedata = array(
-			'operation_id' => $op,
-			'user_uid' => (string)$order->id_customer,
-			'item_uid' => (string)$params['id_order'],
-			'item_value' => (string)$order->total_paid,
-			'item_currency' => $currency->iso_code,
-			'language' => $lang->iso_code,
-			'firstname' => $customer->firstname,
-			'lastname' => $customer->lastname,
-			'email' => $customer->email,
+		// error_log(print_R($order->getCartProducts(),TRUE));
 
-		);
+		$normal_mode_total = ( Configuration::get('INCLUDE_SHIPPING') ? $order->total_products_wt : $order->total_products );
 
-		try {
-			$poke = $req->poke($pokedata);
-		} catch (Exception $e) {
-			error_log( print_R($e->getMessage(),TRUE) );
-			// TODO : logt his and handle this case...
+		if (Configuration::get('LUCKYCYCLE_MANUFACTURERS_IDS') && strlen( Configuration::get('LUCKYCYCLE_MANUFACTURERS_IDS') )) {
+			$total_lc = 0;
+			error_log("we have a manufacturer list" . print_R(Configuration::get('LUCKYCYCLE_MANUFACTURERS_IDS'),true));
+			$manufacturers = explode(',', Configuration::get('LUCKYCYCLE_MANUFACTURERS_IDS'));
+			if (count($manufacturers)>0) {
+				foreach ($order->getCartProducts() as $key => $value) {
+					error_log("checking product " . $value['id_product'] . " with manufacturer id " . $value['id_manufacturer']);
+					foreach ($manufacturers as $k => $m) {
+						if ($value['id_manufacturer'] == $m) {
+							error_log($value['id_product'] . " is in manufacturer list");
+							$total_lc += $value['total_price_tax_incl'];
+						}
+					}
+				}
+			} else {
+				$total_lc = $normal_mode_total;
+			}
+		} else {
+			$total_lc = $normal_mode_total;
 		}
 
-		// error_log( print_R($poke,TRUE) );
-		// error_log( print_R($poke['can_play'],TRUE) );
-		if ($poke && $poke['can_play']==1) {
+		error_log( "LC total : " . print_R($total_lc,TRUE) );
 
-			error_log("we got a poke back that can play");
+		// here we can recalculate the total for the products in cas of hybrid version
 
-			// check existenz
-			$sql = "select count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where hash = '" . $poke['computed_hash'] . "'";
-			//error_log( print_R($sql,TRUE) );
-			if ($row = Db::getInstance()->getRow($sql))
-				$tot = $row['tot'];
+		if($total_lc > 0) {
+			$api_key = Configuration::get('LUCKYCYCLE_API_KEY');
+			$op = Configuration::get('LUCKYCYCLE_OPERATION_HASH');
+			$url = Configuration::get('LUCKYCYCLE_PRODUCTION') ? 'https://www.luckycycle.com' : Configuration::get('LUCKYCYCLE_CUSTOM_URL');
+			$req = new LuckyCycleApi($url);
+			$req->setApiKey($api_key);
+			$req->setOperationId($op);
+			$pokedata = array(
+				'operation_id' => $op,
+				'user_uid' => (string)$order->id_customer,
+				'item_uid' => (string)$params['id_order'],
+				'item_value' => (string)$total_lc,
+				'item_currency' => $currency->iso_code,
+				'language' => $lang->iso_code,
+				'firstname' => $customer->firstname,
+				'lastname' => $customer->lastname,
+				'email' => $customer->email,
 
-			if ($tot==0) 
-			{
-				Db::getInstance()->insert('luckycycle_pokes', array(
-					'hash' => $poke['computed_hash'],
-					'id_order' => (string)$params['id_order'],
-					'operation_id' => Configuration::get('LUCKYCYCLE_OPERATION_HASH'),
-					'type' => 'basket',
-					'id_customer' => (string)$order->id_customer,
-					'created_at' => date('Y-m-d H:i:s'),
-					'total_played' => $order->total_paid_real
-					));
-				error_log('Poke added in DB');
-			} else {
-				error_log('Poke already in DB');
+			);
+
+			try {
+				$poke = $req->poke($pokedata);
+			} catch (Exception $e) {
+				error_log( "Error poking : " . print_R($e->getMessage(),TRUE) );
+				// TODO : logt his and handle this case...
 			}
 
-			
-		} else {
-			// user cannot play whatever reason... TODO handle this
-			error_log("we didn't get a poke back, user cannot play on this order or an error happened");
+			// error_log( print_R($poke,TRUE) );
+			// error_log( print_R($poke['can_play'],TRUE) );
+			if ($poke && $poke['can_play']==1) {
+
+				error_log("we got a poke back that can play");
+
+				// check existenz
+				$sql = "select count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where hash = '" . $poke['computed_hash'] . "'";
+				//error_log( print_R($sql,TRUE) );
+				if ($row = Db::getInstance()->getRow($sql))
+					$tot = $row['tot'];
+
+				if ($tot==0) 
+				{
+					Db::getInstance()->insert('luckycycle_pokes', array(
+						'hash' => $poke['computed_hash'],
+						'id_order' => (string)$params['id_order'],
+						'operation_id' => Configuration::get('LUCKYCYCLE_OPERATION_HASH'),
+						'type' => 'basket',
+						'id_customer' => (string)$order->id_customer,
+						'created_at' => date('Y-m-d H:i:s'),
+						'total_played' => $order->total_paid_real
+						));
+					error_log('Poke added in DB');
+				} else {
+					error_log('Poke already in DB');
+				}
+
+				
+			} else {
+				// user cannot play whatever reason... TODO handle this
+				error_log("we didn't get a poke back, user cannot play on this order or an error happened");
+			}
 		}
+	} else {
+		error_log("LC module is not active");
 	}
 }
 
