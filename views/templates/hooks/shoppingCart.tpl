@@ -1,0 +1,1 @@
+Thanks to <a target="_blank" href="https://www.luckycycle.com">LuckyCycle</a>, you may participate to a game that could get your order refunded.

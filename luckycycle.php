@@ -89,7 +89,7 @@ class LuckyCycle extends Module
 				//&& $this->registerHook('actionCartSave')
 			&& $this->registerHook('displayOrderConfirmation')
 			&& $this->registerHook('actionPaymentConfirmation')
-			&& $this->registerHook('shoppinCart')
+			&& $this->registerHook('displayShoppingCart')
 				//&& $this->registerHook('actionOrderStatusPostUpdate')
 			;
 		}
@@ -173,14 +173,16 @@ class LuckyCycle extends Module
 	/**
  	 * <head> Hook
 	 */
-	public function hookShoppingCart()
+	public function hookDisplayShoppingCart()
 	{
 		error_log("Lucky hookShoppingCart");
-
+		if (Configuration::get('LUCKYCYCLE_ACTIVE')) {
+			return $this->display(__FILE__, 'views/templates/hooks/shoppingCart.tpl');
+		}
 		// CSS
-		$this->context->controller->addCSS($this->_path.'views/css/'.$this->name.'.css');
+		//$this->context->controller->addCSS($this->_path.'views/css/'.$this->name.'.css');
 		// JS
-		$this->context->controller->addJS($this->_path.'views/js/'.$this->name.'.js');
+		//$this->context->controller->addJS($this->_path.'views/js/'.$this->name.'.js');
 	}
 
 
@@ -353,20 +355,20 @@ class LuckyCycle extends Module
 						'rows' => 3,
 						'desc' => $this->l('Comma separated list of manufacturers ids (ex: 1,4,23,44)'),
 						),
-					array(
-						'type' => 'text',
-						'label' => $this->l('Exclude categories (not working)'),
-						'name' => 'luckycycle_categories_excluded',
-						'rows' => 3,
-						'desc' => $this->l('Comma separated list of categories ids'),
-						),
-					array(
-						'type' => 'text',
-						'label' => $this->l('Only include categories (not working)'),
-						'name' => 'luckycycle_categories_only',
-						'rows' => 3,
-						'desc' => $this->l('Comma separated list of categories ids'),
-						),
+					// array(
+					// 	'type' => 'text',
+					// 	'label' => $this->l('Exclude categories (not working)'),
+					// 	'name' => 'luckycycle_categories_excluded',
+					// 	'rows' => 3,
+					// 	'desc' => $this->l('Comma separated list of categories ids'),
+					// 	),
+					// array(
+					// 	'type' => 'text',
+					// 	'label' => $this->l('Only include categories (not working)'),
+					// 	'name' => 'luckycycle_categories_only',
+					// 	'rows' => 3,
+					// 	'desc' => $this->l('Comma separated list of categories ids'),
+					// 	),
 
 
 					),
@@ -451,7 +453,7 @@ public function hookDisplayOrderConfirmation($params)
 			'hash' => $row['hash']
 			));
 
-		return $this->display(__FILE__, 'views/templates/hooks/orderConfirmation.tpl');	
+		return $this->display(__FILE__, 'views/templates/hooks/orderConfirmation.tpl');
 	}
 }
 
