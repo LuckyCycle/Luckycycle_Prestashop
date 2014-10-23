@@ -84,6 +84,7 @@ class LuckyCycle extends Module
 			&& Configuration::updateValue('LUCKYCYCLE_CATEGORIES_EXCLUDED', '')
 			&& Configuration::updateValue('LUCKYCYCLE_CATEGORIES_ONLY', '')
 			&& Configuration::updateValue('LUCKYCYCLE_INCLUDE_SHIPPING', true)
+			&& Configuration::updateValue('LUCKYCYCLE_SHOW_BANNER', false)
 			&& $this->registerHook('displayNav')
 			&& $this->registerHook('displayHeader')
 				//&& $this->registerHook('actionCartSave')
@@ -111,6 +112,7 @@ class LuckyCycle extends Module
 		&& Configuration::deleteByName('LUCKYCYCLE_CATEGORIES_EXCLUDED')
 		&& Configuration::deleteByName('LUCKYCYCLE_CATEGORIES_ONLY')
 		&& Configuration::deleteByName('LUCKYCYCLE_INCLUDE_SHIPPING') 
+		&& Configuration::deleteByName('LUCKYCYCLE_SHOW_BANNER') 
 		&& parent::uninstall();
 	}
 
@@ -136,6 +138,7 @@ class LuckyCycle extends Module
 			Configuration::updateValue('LUCKYCYCLE_CATEGORIES_EXCLUDED', Tools::getValue('luckycycle_categories_excluded'));
 			Configuration::updateValue('LUCKYCYCLE_CATEGORIES_ONLY', Tools::getValue('luckycycle_categories_only'));
 			Configuration::updateValue('LUCKYCYCLE_INCLUDE_SHIPPING', Tools::getValue('luckycycle_include_shipping'));
+			Configuration::updateValue('LUCKYCYCLE_SHOW_BANNER', Tools::getValue('luckycycle_show_banner'));
 			//$this->_clearCache('luckycycle.tpl');
 			//$this->_clearCache('nav.tpl');
 			$html .= $this->displayConfirmation($this->l('Configuration updated'));
@@ -285,12 +288,12 @@ class LuckyCycle extends Module
 						'name' => 'luckycycle_operation_hash',
 						'desc' => $this->l('You can get this ID on LuckyCycle.com.'),
 						),
-					// UNCOMMENT HERE TO BE ABLE TO CHANGE API SERVER
+					
 					array(
 						'type' => 'switch',
-						'label' => $this->l('Production mode'),
-						'name' => 'luckycycle_production',
-						'desc' => $this->l('Set to Yes to use the production server'),
+						'label' => $this->l('Use banner image'),
+						'name' => 'luckycycle_show_banner',
+						'desc' => $this->l('Use the banner send in json in place of an iframe. Go to Luckycycle backend to setup'),
 						'values' => array(
 							array(
 								'id' => 'active_on',
@@ -303,12 +306,6 @@ class LuckyCycle extends Module
 								'label' => $this->l('Disabled')
 								)
 							),
-						),
-					array(
-						'type' => 'text',
-						'label' => $this->l('Custom Url'),
-						'name' => 'luckycycle_custom_url',
-						'desc' => $this->l('Use a custom url to make the calls'),
 						),
 					array(
 						'type' => 'text',
@@ -354,6 +351,31 @@ class LuckyCycle extends Module
 						'name' => 'luckycycle_manufacturers_ids',
 						'rows' => 3,
 						'desc' => $this->l('Comma separated list of manufacturers ids (ex: 1,4,23,44)'),
+						),
+					// UNCOMMENT HERE TO BE ABLE TO CHANGE API SERVER
+					array(
+						'type' => 'switch',
+						'label' => $this->l('Production mode'),
+						'name' => 'luckycycle_production',
+						'desc' => $this->l('Set to Yes to use the production server'),
+						'values' => array(
+							array(
+								'id' => 'active_on',
+								'value' => 1,
+								'label' => $this->l('Enabled')
+								),
+							array(
+								'id' => 'active_off',
+								'value' => 0,
+								'label' => $this->l('Disabled')
+								)
+							),
+						),
+					array(
+						'type' => 'text',
+						'label' => $this->l('Custom Url'),
+						'name' => 'luckycycle_custom_url',
+						'desc' => $this->l('Use a custom url to make the calls'),
 						),
 					// array(
 					// 	'type' => 'text',
@@ -414,6 +436,7 @@ public function getConfigFieldsValues()
 		'luckycycle_categories_excluded' => 		Tools::getValue('luckycycle_categories_excluded', Configuration::get('LUCKYCYCLE_CATEGORIES_EXCLUDED')),
 		'luckycycle_categories_only' => 		Tools::getValue('luckycycle_categories_only', Configuration::get('LUCKYCYCLE_CATEGORIES_ONLY')),
 		'luckycycle_include_shipping' => 		Tools::getValue('luckycycle_include_shipping', Configuration::get('LUCKYCYCLE_INCLUDE_SHIPPING')),
+		'luckycycle_show_banner' => 		Tools::getValue('luckycycle_show_banner', Configuration::get('LUCKYCYCLE_SHOW_BANNER')),
 		);
 }
 
@@ -433,7 +456,7 @@ public function hookDisplayOrderConfirmation($params)
 
 	error_log("PS order_id/customer_id:" . $order_id . " / " . $customer_id);
 
-	$sql = "select hash,count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where id_order = '" . $order_id . "' AND id_customer = '" . $customer_id . "'";
+	$sql = "select hash,banner_url,count(*) as tot FROM " . _DB_PREFIX_ . "luckycycle_pokes where id_order = '" . $order_id . "' AND id_customer = '" . $customer_id . "'";
 	error_log( print_R($sql,TRUE) );
 	if ($row = Db::getInstance()->getRow($sql))
 		$tot = $row['tot'];
@@ -450,10 +473,14 @@ public function hookDisplayOrderConfirmation($params)
 				'height' => Configuration::get('LUCKYCYCLE_IFRAME_HEIGHT'),
 				'css' => Configuration::get('LUCKYCYCLE_IFRAME_CSS'),
 				),
-			'hash' => $row['hash']
+			'hash' => $row['hash'],
+			'banner_url' => $row['banner_url'],
 			));
-
-		return $this->display(__FILE__, 'views/templates/hooks/orderConfirmation.tpl');
+		if (Configuration::get('LUCKYCYCLE_SHOW_BANNER')) {
+			return $this->display(__FILE__, 'views/templates/hooks/orderConfirmationBanner.tpl');
+		} else {
+			return $this->display(__FILE__, 'views/templates/hooks/orderConfirmation.tpl');
+		}
 	}
 }
 
@@ -502,6 +529,36 @@ public function hookActionPaymentConfirmation($params)
 			$total_lc = $normal_mode_total;
 		}
 
+// CART
+		#$customer_id = $params['objOrder']->id_customer;
+		#$customer = new Customer((int)($customer_id));
+
+		global $cookie;
+		#$lang = strtolower(Language::getIsoById(intval($cookie->id_lang)));
+
+		#$the_order = $params['objOrder']->getProducts();
+		$the_order = $order->getProducts();
+
+		// echo "<pre>";
+		// print_r($the_order);
+		// echo "</pre>";
+
+		$the_cart = [];
+
+		foreach ($the_order as $key => $value) {
+			$item['price'] = $value['unit_price_tax_incl'];
+			$item['quantity'] = $value['product_quantity'];
+			$item['product_id'] = $value['product_id'];
+			$item['category_id'] = $value['id_category_default'];
+			$item['manufacturer_id'] = $value['id_manufacturer'];
+			$item['product_name'] = $value['product_name'];
+			$item['reference'] = $value['reference'];
+			// echo "<pre>";
+			// var_dump($item);
+			// echo "</pre>";	
+			array_push($the_cart,$item);
+		}
+// -> CART
 		error_log( "LC total : " . print_R($total_lc,TRUE) );
 
 		// here we can recalculate the total for the products in cas of hybrid version
@@ -523,6 +580,7 @@ public function hookActionPaymentConfirmation($params)
 				'firstname' => $customer->firstname,
 				'lastname' => $customer->lastname,
 				'email' => $customer->email,
+				'cart' => $the_cart,
 
 			);
 
@@ -549,6 +607,7 @@ public function hookActionPaymentConfirmation($params)
 				{
 					Db::getInstance()->insert('luckycycle_pokes', array(
 						'hash' => $poke['computed_hash'],
+						'banner_url' => $poke['banner_url'],
 						'id_order' => (string)$params['id_order'],
 						'operation_id' => Configuration::get('LUCKYCYCLE_OPERATION_HASH'),
 						'type' => 'basket',

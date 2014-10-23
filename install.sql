@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS `PREFIX_luckycycle_pokes`;
 CREATE TABLE `PREFIX_luckycycle_pokes` (
   `id_poke` int(11) NOT NULL AUTO_INCREMENT,
   `hash` varchar(255) NOT NULL,
+  `banner_url` varchar(255) NOT NULL,
   `type` varchar(32) NOT NULL,
   `id_customer` int(11) NOT NULL,
   `id_order` int(11) NOT NULL,
