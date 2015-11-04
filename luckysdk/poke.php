@@ -5,7 +5,7 @@
 
 require_once './lucky.php';
 
-$api_key = '9c936dbf1cfa00bc11a8961238d34fb1';
+$api_key = 'FILL_IN_API_KEY';
 
 if (isset($_GET['operation_id'])) {
 
@@ -45,8 +45,11 @@ if (isset($_GET['operation_id'])) {
 		if($random_data) {
 			$pokedata['random_data'] = 1;
 		}
-
-		$poke = $req->poke($pokedata);
+		$req->set_content($pokedata);
+		#example of cart content
+		$req->add_cart_item(['price'=>30 , 'quantity'=>2 , 'product_id'=>'155']);
+		$req->add_cart_item(['price'=>130 , 'quantity'=>2 , 'product_id'=>'165']);
+		$poke = $req->poke($req->get_content());
 
 	}
 } else {
@@ -56,7 +59,7 @@ if (isset($_GET['operation_id'])) {
 ?>
 
 
-Enter an operation id to make a poke: 
+Enter an operation id to make a poke:
 
 <form action="poke.php" method="">
 	<input type="text" name="operation_id" placeholder="Operation id">
@@ -68,7 +71,7 @@ Enter an operation id to make a poke:
 	<input type="text" name="firstname" placeholder="Firstname" value="firstname">
 	<input type="text" name="lastname" placeholder="Lastname" value="lastname">
 	<input type="checkbox" name="random_data" value="1">
-	
+
 	<input type="submit">
 </form>
 
