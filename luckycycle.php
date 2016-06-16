@@ -35,7 +35,7 @@ class LuckyCycle extends Module
 		$this->name = 'luckycycle';
 
 		$this->tab = 'advertising_marketing';
-		$this->version = '0.1';
+		$this->version = '0.2';
 		$this->author = 'LuckyCycle';
 		$this->need_instance = 0;
 		$this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.7');
