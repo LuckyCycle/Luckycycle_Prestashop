@@ -1,0 +1,1 @@
+{html_entity_decode($vars['snippet'], 3)}

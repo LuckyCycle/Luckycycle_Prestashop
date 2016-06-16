@@ -75,6 +75,7 @@ class LuckyCycle extends Module
 			return parent::install()
 			&& Configuration::updateValue('LUCKYCYCLE_API_KEY', '')
 			&& Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', '')
+			&& Configuration::updateValue('LUCKYCYCLE_SNIPPET', '')
 			&& Configuration::updateValue('LUCKYCYCLE_ACTIVE', false)
 			&& Configuration::updateValue('LUCKYCYCLE_MANUFACTURERS_IDS', '')
 			&& Configuration::updateValue('LUCKYCYCLE_CATEGORIES_EXCLUDED', '')
@@ -97,6 +98,7 @@ class LuckyCycle extends Module
 	{
 		return Configuration::deleteByName('LUCKYCYCLE_API_KEY')
 		&& Configuration::deleteByName('LUCKYCYCLE_OPERATION_HASH')
+		&& Configuration::deleteByName('LUCKYCYCLE_SNIPPET')
 		&& Configuration::deleteByName('LUCKYCYCLE_ACTIVE')
 		&& Configuration::deleteByName('LUCKYCYCLE_MANUFACTURERS_IDS')
 		&& Configuration::deleteByName('LUCKYCYCLE_CATEGORIES_EXCLUDED')
@@ -117,6 +119,7 @@ class LuckyCycle extends Module
 			// TODO check for validity of apikey and op id through the api
 			Configuration::updateValue('LUCKYCYCLE_API_KEY', Tools::getValue('luckycycle_api_key'));
 			Configuration::updateValue('LUCKYCYCLE_OPERATION_HASH', Tools::getValue('luckycycle_operation_hash'));
+			Configuration::updateValue('LUCKYCYCLE_SNIPPET', htmlentities(Tools::getValue('luckycycle_snippet'), ENT_QUOTES));
 			Configuration::updateValue('LUCKYCYCLE_ACTIVE', Tools::getValue('luckycycle_active'));
 			Configuration::updateValue('LUCKYCYCLE_MANUFACTURERS_IDS', Tools::getValue('luckycycle_manufacturers_ids'));
 			Configuration::updateValue('LUCKYCYCLE_CATEGORIES_EXCLUDED', Tools::getValue('luckycycle_categories_excluded'));
@@ -181,8 +184,11 @@ class LuckyCycle extends Module
 		$this->context->controller->addCSS($this->_path.'views/css/'.$this->name.'.css');
 		// JS
 		$this->context->controller->addJS($this->_path.'views/js/'.$this->name.'.js');
+		$snippet = Configuration::get('LUCKYCYCLE_SNIPPET');
+		$this->context->smarty->assign('vars', array(
+			'snippet' => $snippet));
+		return $this->display(__FILE__, 'views/templates/hooks/header.tpl');
 	}
-
 	/**
  	 * Top of pages hook
 	 */
@@ -272,6 +278,13 @@ class LuckyCycle extends Module
 						'desc' => $this->l('You can get this ID on LuckyCycle.com.'),
 						),
 					array(
+						'type' => 'textarea',
+						'label' => $this->l('HTML/JS snippet'),
+						'name' => 'luckycycle_snippet',
+						'desc' => $this->l('Insert your custom snippet'),
+						'rows' => 5,
+						),
+					array(
 						'type' => 'switch',
 						'label' => $this->l('Include shipping costs'),
 						'name' => 'luckycycle_include_shipping',
@@ -338,6 +351,7 @@ public function getConfigFieldsValues()
 	return array(
 		'luckycycle_api_key' => 		Tools::getValue('luckycycle_api_key', Configuration::get('LUCKYCYCLE_API_KEY')),
 		'luckycycle_operation_hash' => 	Tools::getValue('luckycycle_operation_hash', Configuration::get('LUCKYCYCLE_OPERATION_HASH')),
+		'luckycycle_snippet' => 	Tools::getValue('luckycycle_snippet', Configuration::get('LUCKYCYCLE_SNIPPET')),
 		'luckycycle_active' => 			Tools::getValue('luckycycle_active', Configuration::get('LUCKYCYCLE_ACTIVE')),
 		'luckycycle_manufacturers_ids' => 		Tools::getValue('luckycycle_manufacturers_ids', Configuration::get('LUCKYCYCLE_MANUFACTURERS_IDS')),
 		'luckycycle_categories_excluded' => 		Tools::getValue('luckycycle_categories_excluded', Configuration::get('LUCKYCYCLE_CATEGORIES_EXCLUDED')),
