@@ -33,7 +33,6 @@ class LuckyCycle extends Module
 	public function __construct()
 	{
 		$this->name = 'luckycycle';
-
 		$this->tab = 'advertising_marketing';
 		$this->version = '0.2';
 		$this->author = 'LuckyCycle';
